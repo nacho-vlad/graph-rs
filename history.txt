@@ -1,0 +1,38 @@
+#V2
+print_graph
+help
+print_graph
+remove_node 0
+print_graph
+contains_edge 3 4
+contains_edge 0 0
+print_graph
+vertex_count
+indegree 7
+outdegree 7
+contains_edge 7 1000
+add_vertex 1000
+add_edge 7 1000 107
+outbound 7
+add_vertex 1001
+add_edge 0 1001 5
+add_edge 0 1001 8
+outbound 0
+inbound 1001
+help
+remove_node 0
+remove_edge 1 5
+help
+print_graph
+connected_components
+help
+vertex_count
+connected_components
+print_graph
+help
+vertex_count
+edge_count
+connected_components
+vertex_count
+edge_count
+connected_components
