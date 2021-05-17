@@ -3,6 +3,7 @@ use rustyline::Editor;
 use graph::*;
 use rand::{ Rng, seq::IteratorRandom };
 use std::path::Path;
+use std::collections::HashSet;
 
 
 fn random_graph(vertices: u32, edges: u32) -> GraphMap<u32,u32> {
@@ -10,7 +11,7 @@ fn random_graph(vertices: u32, edges: u32) -> GraphMap<u32,u32> {
     let mut graph = GraphMap::<u32, u32>::new();
     let mut rng = rand::thread_rng();
     
-    if vertices*vertices > edges {
+    if edges > vertices*vertices {
         println!("Impossible");
         return graph;
     }
@@ -55,11 +56,25 @@ fn read_graph(path: &Path, undirected: bool) -> GraphMap<u32, u32> {
     graph
 }
 
-fn write_graph<W: std::io::Write>(writer: &mut W, graph: &GraphMap<u32,u32> ) {
-    write!(writer, "{} {}\n", graph.vertex_count(), graph.edge_count()).unwrap();
+fn write_graph<W: std::io::Write>(writer: &mut W, graph: &GraphMap<u32,u32>, undirected: bool ) {
+
+    let mut printed = HashSet::<(u32,u32,u32)>::new();
     
     for ((&origin, &target), &cost) in graph.edges() {
-        write!(writer, "{} {} {}\n", origin,target,cost).unwrap();
+
+        if !undirected {
+            printed.insert((origin, target, cost));
+        }
+
+        if undirected && !printed.contains(&(target, origin, cost)) {
+            printed.insert((origin, target, cost));
+        }
+    }
+
+    write!(writer, "{} {}\n", graph.vertex_count(), printed.len()).unwrap();
+
+    for (o, t, c) in printed.iter() {
+        write!(writer, "{} {} {}\n", o, t, c).unwrap();
     }
 
     for &v in graph.vertices() {
@@ -85,12 +100,14 @@ fn show_help() {
     println!("print_graph");
     println!("contains_edge");
     println!("connected_components");
+    println!("dijkstra <origin> <dest>");
 }
 
 fn main() {
-    let in_file: &str = "components.txt";   
+    let undirected = false;
+    let in_file: &str = "graph1k.txt";   
     let out_file: &str = "graph1k_modif.txt";
-    let mut graph = read_graph(Path::new(in_file), true);
+    let mut graph = read_graph(Path::new(in_file), undirected);
 
     let mut rl = Editor::<()>::new();
 
@@ -157,7 +174,7 @@ fn main() {
                         println!("{}", graph.edge_count());
                     },                
                     "print_graph" => {
-                        write_graph(&mut std::io::stdout(), &graph);
+                        write_graph(&mut std::io::stdout(), &graph, undirected);
                     },
                     "contains_edge" => {
                         let first = str::parse::<u32>(line_split[1]).unwrap();
@@ -169,11 +186,23 @@ fn main() {
                         for g in components.iter() {
 
                             println!("Component: ");
-                            for v in g.vertices() {
-                                print!("{} ", v);
-                            }
-                            println!("");
+                            write_graph(&mut std::io::stdout(), &g, undirected);
+                            // for v in g.vertices() {
+                            //     print!("{} ", v);
+                            // }
+                            // println!("");
                         }
+                    }
+                    "dijkstra" => {
+                        let first = str::parse::<u32>(line_split[1]).unwrap();
+                        let second = str::parse::<u32>(line_split[2]).unwrap();
+
+                        let (path, cost) = graph.dijkstra(first, second).unwrap();
+                        print!("Path: ");
+                        for node in path.iter() {
+                            print!("{} ", node);
+                        }
+                        println!("\nTotal cost: {}", cost);
                     }
                     _ => {
                         println!("No such command");
@@ -200,6 +229,6 @@ fn main() {
     rl.save_history("history.txt").unwrap();
 
     let mut file = std::fs::File::create(Path::new(out_file)).unwrap();
-    write_graph(&mut file, &graph);
+    write_graph(&mut file, &graph, undirected);
 
 }
